@@ -131,6 +131,9 @@
         // make the input element another possible setting
         // in some cases (e.g. drag & drop) there is no input element
         u.input = settings.file_input;
+        if (settings.file_input_selector) {
+            u.input = document.getElementById(settings.file_input_selector);
+        }
         u.file  = settings.file;
 
         // NOTE: For Amazon S3, the minimum chunk size is 5MB
@@ -138,14 +141,19 @@
         // is 10,000, so for example, if the chunk size is 6MB, the maximum
         // possible file size is 6MB * 10,000 = ~58GB
         settings.chunk_size = settings.chunk_size || (6 * MB); // default 6MB
-        settings.max_size = settings.max_size || 50 * (1 << 30); // 5GB
+        settings.max_size = settings.max_size || 0; // default to 0
 
         // the number of parallel upload xhr's
         settings.num_workers = settings.num_workers || 4;
 
         // the S3 object key; I recommend to generate this dynamically (e.g.
         // a random string) to avoid unwanted overwrites.
+        if (settings.base_key) {
+            settings.temp_filename = Math.floor(Math.random() * Math.pow(10, 10)).toString();
+            settings.key = settings.base_key + settings.temp_filename;
+        } else {
         settings.key = settings.key || "the_key";
+        }
 
         // the Amazon S3 bucket where you'll store the uploads
         settings.bucket = settings.bucket;
@@ -179,6 +187,9 @@
         settings.on_init = settings.on_init || function() {};
         settings.on_start = settings.on_start || function() {};
         settings.on_chunk_uploaded = settings.on_chunk_uploaded || function() {};
+
+        // time to wait before retrying an XHR operation, default 1 second.
+        settings.retry_timeout = settings.retry_timeout || 1000;
 
         // extra parameters to give to the backend
         settings.extra_params = settings.extra_params || {};
@@ -800,7 +811,7 @@
             // if there's an error, retry after one second
             setTimeout(function() {
                 u.get_end_signature(callback);
-            }, 1000);
+            }, u.settings.retry_timeout);
         };
         var url = u.settings.ajax_base + "/get_end_signature/?upload_id=" + escape(this.upload_id) + "&key=" + this.settings.key;
 
@@ -833,7 +844,7 @@
             // disabled, etc.)
             setTimeout(function() {
                 u.get_list_signature(callback);
-            }, 1000);
+            }, u.settings.retry_timeout);
         };
         var url = u.settings.ajax_base + "/get_list_signature/?upload_id=" + escape(this.upload_id) + "&key=" + this.settings.key;
         XHR({
@@ -863,7 +874,7 @@
             // if there's an error, retry after one second
             setTimeout(function() {
                 u.get_chunk_signature(chunk, callback);
-            }, 1000);
+            }, u.settings.retry_timeout);
         };
         var url = u.settings.ajax_base + "/get_chunk_signature/?chunk=" + (chunk + 1) + "&upload_id=" + escape(this.upload_id) + "&key=" + this.settings.key;
         XHR({
@@ -909,7 +920,7 @@
             // if it fails, retry after waiting one second
             setTimeout(function() {
                 u.get_init_signature(callback);
-            }, 1000);
+            }, u.settings.retry_timeout);
         };
         var url = u.settings.ajax_base + "/get_init_signature/?key=" + u.settings.key +
                 "&mime_type=" + escape(u.settings.content_type) +
@@ -944,7 +955,7 @@
             // if it fails, wait one second and try again
             setTimeout(function() {
                 u.get_all_signatures(callback);
-            }, 1000);
+            }, u.settings.retry_timeout);
         };
         var url = u.settings.ajax_base + "/get_all_signatures/?key=" + key +
                 "&mime_type=" + escape(u.settings.content_type) +
@@ -1219,6 +1230,10 @@
     Uploader.prototype.log_status = function() {
         // var u = this;
         // u.log(this.get_total_progress() / this.file.size * 100);
+    };
+
+    Uploader.prototype.set_max_size = function(max_size) {
+        this.settings.max_size = max_size || 0;
     };
 
     Uploader.prototype.on_chunk_progress = function(f) { u.settings.on_chunk_progress = f; };
