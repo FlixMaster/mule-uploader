@@ -152,7 +152,7 @@
             settings.temp_filename = Math.floor(Math.random() * Math.pow(10, 10)).toString();
             settings.key = settings.base_key + settings.temp_filename;
         } else {
-        settings.key = settings.key || "the_key";
+            settings.key = settings.key || "the_key";
         }
 
         // the Amazon S3 bucket where you'll store the uploads
@@ -309,7 +309,7 @@
                     method: "POST",
                     url: u.settings.host + "/" + u.settings.key + "?uploads",
                     load_callback: handler,
-                    error_callback: handler,
+                    error_callback: u.error_handler,
                     headers: {
                         "x-amz-date": date,
                         "x-amz-acl": u.settings.acl,
@@ -785,6 +785,7 @@
             XHR({
                 method: "GET",
                 load_callback: handler,
+                error_callback: handler,
                 url: u.settings.host + path,
                 headers: {
                     "x-amz-date": date,
@@ -890,6 +891,10 @@
         var u = this;
         var num_chunks = Math.ceil(u.file.size / u.settings.chunk_size);
         var handler = function(e) {
+            if (e.target.status / 100 != 2) {
+                u.settings.on_error.call(u, e);
+                return;
+            }
             var response = JSON.parse(e.target.responseText);
 
             // the server may also respond with chunks already loaded
@@ -986,7 +991,8 @@
             "&filesize=" + u.file.size + "&last_modified=" + u.file.lastModifiedDate.valueOf();
         XHR({
             url: url,
-            extra_params: u.settings.extra_params
+            extra_params: u.settings.extra_params,
+            error_callback: u.error_handler
         });
     };
 
@@ -1002,7 +1008,8 @@
             "&filesize=" + u.file.size + "&last_modified=" + u.file.lastModifiedDate.valueOf();
         XHR({
             url: url,
-            extra_params: u.settings.extra_params
+            extra_params: u.settings.extra_params,
+            error_callback: u.error_handler
         });
     };
 
@@ -1234,6 +1241,10 @@
 
     Uploader.prototype.set_max_size = function(max_size) {
         this.settings.max_size = max_size || 0;
+    };
+
+    Uploader.prototype.error_handler = function(e) {
+        this.settings.on_error.call(u, e);
     };
 
     Uploader.prototype.on_chunk_progress = function(f) { u.settings.on_chunk_progress = f; };
