@@ -1,6 +1,7 @@
 /**
  * mule-upload.js v.1.0.1
  * https://github.com/FlixMaster/mule-uploader
+ * https://github.com/cinely/mule-uploader
  *
  * Copyright 2012-2013, Gabriel Purcaru
  * Released under GPL License.
