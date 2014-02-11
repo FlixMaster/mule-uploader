@@ -283,6 +283,9 @@
             }
         }
 
+        // from now on, we are "processing" the file upload
+        u.set_state("processing");
+
         // initialize the file upload
         // we need the `init` signature for this
         u.settings.on_select.call(u, file);
@@ -350,7 +353,7 @@
         var u = this;
 
         // we can't start the upload if we are waiting for user input
-        if(u.get_state() != "waiting") {
+        if(u.get_state() == "waiting") {
             return;
         }
 
@@ -363,9 +366,6 @@
             u.settings.on_progress.call(u, 0, u.file.size);
             u._start_fired = true;
         }
-
-        // from now on, we are "processing" the file upload
-        u.set_state("processing");
 
         // at this point we may have some chunks already uploaded,
         // so we may trigger a progress callback with the reported progress
