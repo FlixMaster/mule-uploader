@@ -191,6 +191,9 @@
 
         // time to wait before retrying an XHR operation, default 1 second.
         settings.retry_timeout = settings.retry_timeout || 1000;
+        // times to retry before failing permanently
+        settings.retry_limit = settings.retry_limit || 5;
+        u.retry_count = 0;
 
         // extra parameters to give to the backend
         settings.extra_params = settings.extra_params || {};
@@ -319,7 +322,7 @@
                     }
                 });
             } else {
-                // resume a previus upload
+                // resume a previous upload
                 if(!force) {
                     // get the uploaded parts from S3
                     u.list_parts(function() {
@@ -806,14 +809,17 @@
             return;
         }
         var handler = function(e) {
+            u.retry_count = 0;
             var response = JSON.parse(e.target.responseText);
             callback(response.signature, response.date);
         };
-        var error_handler = function() {
-            // if there's an error, retry after one second
-            setTimeout(function() {
-                u.get_end_signature(callback);
-            }, u.settings.retry_timeout);
+        var error_handler = function(e) {
+            u.retry(e, function() {
+                // if there's an error, retry after one second
+                setTimeout(function() {
+                    u.get_end_signature(callback);
+                }, u.settings.retry_timeout);
+            });
         };
         var url = u.settings.ajax_base + "/get_end_signature/?upload_id=" + escape(this.upload_id) + "&key=" + this.settings.key;
 
@@ -837,16 +843,19 @@
             return;
         }
         var handler = function(e) {
+            u.retry_count = 0;
             var response = JSON.parse(e.target.responseText);
             callback(response.signature, response.date);
         };
         var error_handler = function(e) {
-            // if there's an error, retry after one second
-            // (think server hiccups, internet connection temporarily
-            // disabled, etc.)
-            setTimeout(function() {
-                u.get_list_signature(callback);
-            }, u.settings.retry_timeout);
+            u.retry(e, function() {
+                // if there's an error, retry after one second
+                // (think server hiccups, internet connection temporarily
+                // disabled, etc.)
+                setTimeout(function() {
+                    u.get_list_signature(callback);
+                }, u.settings.retry_timeout);
+            });
         };
         var url = u.settings.ajax_base + "/get_list_signature/?upload_id=" + escape(this.upload_id) + "&key=" + this.settings.key;
         XHR({
@@ -869,14 +878,17 @@
             return;
         }
         var handler = function(e) {
+            u.retry_count = 0;
             var response = JSON.parse(e.target.responseText);
             callback(response.signature, response.date);
         };
         var error_handler = function(e) {
-            // if there's an error, retry after one second
-            setTimeout(function() {
-                u.get_chunk_signature(chunk, callback);
-            }, u.settings.retry_timeout);
+            u.retry(e, function() {
+                // if there's an error, retry after one second
+                setTimeout(function() {
+                    u.get_chunk_signature(chunk, callback);
+                }, u.settings.retry_timeout);
+            });
         };
         var url = u.settings.ajax_base + "/get_chunk_signature/?chunk=" + (chunk + 1) + "&upload_id=" + escape(this.upload_id) + "&key=" + this.settings.key;
         XHR({
@@ -893,9 +905,10 @@
         var num_chunks = Math.ceil(u.file.size / u.settings.chunk_size);
         var handler = function(e) {
             if (e.target.status / 100 != 2) {
-                u.settings.on_error.call(u, e);
+                error_handler(e);
                 return;
             }
+            u.retry_count = 0;
             var response = JSON.parse(e.target.responseText);
 
             // the server may also respond with chunks already loaded
@@ -921,12 +934,14 @@
             }
             callback(response.signature, response.date);
         };
-        var error_handler = function() {
-            u.log("Failed; trying again");
-            // if it fails, retry after waiting one second
-            setTimeout(function() {
-                u.get_init_signature(callback);
-            }, u.settings.retry_timeout);
+        var error_handler = function(e) {
+            u.retry(e, function() {
+                u.log("Failed; trying again");
+                // if it fails, retry after waiting one second
+                setTimeout(function() {
+                    u.get_init_signature(callback);
+                }, u.settings.retry_timeout);
+            });
         };
         var url = u.settings.ajax_base + "/get_init_signature/?key=" + u.settings.key +
                 "&mime_type=" + escape(u.settings.content_type) +
@@ -950,6 +965,7 @@
         var num_chunks = Math.ceil(u.file.size / u.settings.chunk_size);
         var upload_id = u.upload_id;
         var handler = function(e) {
+            u.retry_count = 0;
             var response = JSON.parse(e.target.responseText);
             u._chunk_signatures = response.chunk_signatures;
             u._list_signature = response.list_signature;
@@ -958,10 +974,12 @@
             callback();
         };
         var error_handler = function() {
-            // if it fails, wait one second and try again
-            setTimeout(function() {
-                u.get_all_signatures(callback);
-            }, u.settings.retry_timeout);
+            u.retry(e, function() {
+                // if it fails, wait one second and try again
+                setTimeout(function() {
+                    u.get_all_signatures(callback);
+                }, u.settings.retry_timeout);
+            });
         };
         var url = u.settings.ajax_base + "/get_all_signatures/?key=" + key +
                 "&mime_type=" + escape(u.settings.content_type) +
@@ -1024,6 +1042,7 @@
             // if the HEAD returns 404, re-upload,
             // else, it returns 200 and finish the upload
             if(e.target.status / 100 == 2) {
+                u.retry_count = 0;
                 u.log("Already Uploaded");
                 callback();
             } else {
@@ -1034,9 +1053,11 @@
 
         if(!error_callback && typeof(error_callback) !== "function") {
             error_callback = function() {
-                setTimeout(function() {
-                    return u.check_already_uploaded(callback, error_callback);
-                }, 2500);
+                u.retry(e, function() {
+                    setTimeout(function() {
+                        return u.check_already_uploaded(callback, error_callback);
+                    }, 2500);
+                });
             };
         }
 
@@ -1245,7 +1266,20 @@
     };
 
     Uploader.prototype.error_handler = function(e) {
+        var u = this;
         this.settings.on_error.call(u, e);
+    };
+
+    Uploader.prototype.retry = function(e, f) {
+        var u = this;
+        // if we've exceeded our retry count, permanently fail
+        if (u.retry_count > u.settings.retry_limit) {
+            u.retry_count = 0;
+            u.error_handler(e);
+            return;
+        }
+        u.retry_count++;
+        f();
     };
 
     Uploader.prototype.on_chunk_progress = function(f) { u.settings.on_chunk_progress = f; };
