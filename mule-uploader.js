@@ -1286,6 +1286,19 @@
         f();
     };
 
+    Uploader.prototype.file_equals = function(file) {
+        var u = this;
+        if (
+            u.file.lastModifiedDate.toString() === file.lastModifiedDate.toString() &&
+            u.file.name === file.name &&
+            u.file.type === file.type &&
+            u.file.size === file.size
+            ) {
+            return true;
+        }
+        return false;
+    };
+
     Uploader.prototype.on_chunk_progress = function(f) { u.settings.on_chunk_progress = f; };
     Uploader.prototype.on_progress = function(f) { u.settings.on_progress = f; };
     Uploader.prototype.on_select = function(f) { u.settings.on_select = f; };
