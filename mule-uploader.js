@@ -147,6 +147,11 @@
         // the number of parallel upload xhr's
         settings.num_workers = settings.num_workers || 4;
 
+        // automatically upload on file select
+        if (typeof settings.auto_upload !== "boolean") {
+            settings.auto_upload = true;
+        }
+
         // the S3 object key; I recommend to generate this dynamically (e.g.
         // a random string) to avoid unwanted overwrites.
         if (settings.base_key) {
@@ -296,6 +301,13 @@
         // from now on, we are "processing" the file upload
         u.set_state("processing");
 
+        if (u.settings.auto_upload) {
+            u.start_upload(force);
+        }
+    };
+
+    Uploader.prototype.start_upload = function(force) {
+        var u = this;
         // initialize the file upload
         // we need the `init` signature for this
         u.get_init_signature(function(signature, date) {
@@ -311,7 +323,7 @@
 
                     // get all signatures, then initiate the file upload
                     u.get_all_signatures(function() {
-                        u.load_file(file);
+                        u.load_file(u.file);
                     });
                 };
                 XHR({
@@ -333,7 +345,7 @@
                     u.list_parts(function() {
                         // start the upload
                         u.get_all_signatures(function() {
-                            u.load_file(file);
+                            u.load_file(u.file);
                         });
                     }, function() {
                         // if it fails, re-initiate the upload, and force
@@ -345,12 +357,12 @@
                         u._loaded_chunks = null;
                         u._uploading_chunks = null;
                         u._chunks = null;
-                        return u.upload_file(file, true); // force reload
+                        return u.upload_file(u.file, true); // force reload
                     });
                 } else {
                     // force-start the upload
                     u.get_all_signatures(function() {
-                        u.load_file(file);
+                        u.load_file(u.file);
                     });
                 }
             }
@@ -1271,8 +1283,7 @@
     };
 
     Uploader.prototype.error_handler = function(e) {
-        var u = this;
-        this.settings.on_error.call(u, e);
+        this.settings.on_error.call(this, e);
     };
 
     Uploader.prototype.retry = function(e, f) {
