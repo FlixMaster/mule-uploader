@@ -287,12 +287,16 @@
             }
         }
 
+        // Allow cancelling
+        if (!u.settings.on_select.call(u, file)) {
+            return;
+        }
+
         // from now on, we are "processing" the file upload
         u.set_state("processing");
 
         // initialize the file upload
         // we need the `init` signature for this
-        u.settings.on_select.call(u, file);
         u.get_init_signature(function(signature, date) {
             if(!u.upload_id) {
                 // the backend doesn't report an older upload
