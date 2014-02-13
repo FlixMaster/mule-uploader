@@ -288,7 +288,8 @@
         }
 
         // Allow cancelling
-        if (!u.settings.on_select.call(u, file)) {
+        var proceed = u.settings.on_select.call(u, file);
+        if (typeof proceed === "boolean" && !proceed) {
             return;
         }
 
