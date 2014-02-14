@@ -89,6 +89,7 @@
     var KB = 1024;
     var MB = 1024 * KB;
     var GB = 1024 * MB;
+    var DONE_STATE = 4;
 
     // for new webkit browsers, the .slice() method is named .webkitSlice()
     // similar for mozilla
@@ -351,7 +352,6 @@
                         // if it fails, re-initiate the upload, and force
                         // it to start a new upload
                         u.upload_id = null;
-                        this._loaded_chunks = null;
                         u._progress = null;
                         u._total_progress = null;
                         u._loaded_chunks = null;
@@ -475,14 +475,14 @@
             // the "readystatechange" handler
             var handler = function(e) {
                 // we care about the "done" event triggered while processing
-                if(e.target.readyState != this.DONE || u.get_state() != "processing") {
+                if(e.target.readyState != DONE_STATE || u.get_state() != "processing") {
                     u.log(e);
                     return;
                 }
 
                 // if we don't receive a 2XX response, trigger an error
                 if(e.target.status / 100 != 2) {
-                    return error_handler();
+                    return error_handler(e);
                 }
 
                 // at this point, we know that this chunk finished uploading
@@ -536,9 +536,9 @@
                 last_progress_time = new Date();
             };
             var error_handled = false;
-            var error_handler = function() {
+            var error_handler = function(e) {
                 var error_arguments = arguments;
-                var xhr = this;
+                var xhr = e.target;
                 // the upload may have finished, so check for that
                 u.check_already_uploaded(function() {
                     // if already uploaded
@@ -655,7 +655,7 @@
         u.settings.on_progress.call(u, u.file.size, u.file.size); // 100% done.
 
         // we need the ending signature to put the chunks together
-        this.get_end_signature(function(signature, date) {
+        u.get_end_signature(function(signature, date) {
             var path = "/" + u.settings.key + "?uploadId=" + u.upload_id;
             var method = "POST";
             var authorization = "AWS " + u.settings.access_key + ":" + signature;
@@ -759,8 +759,11 @@
         u.get_list_signature(function(signature, date) {
             var handler = function(e) {
                 // if it's not a 2XX response, trigger the error callback
-                if(e.target.status / 100 != 2 && error_callback) {
-                    return error_callback(e);
+                if(e.target.status / 100 != 2) {
+                    if (error_callback) {
+                        error_callback(e);
+                    }
+                    return;
                 }
 
                 // process the parts, and return an array of
@@ -838,7 +841,7 @@
                 }, u.settings.retry_timeout);
             });
         };
-        var url = u.settings.ajax_base + "/get_end_signature/?upload_id=" + escape(this.upload_id) + "&key=" + this.settings.key;
+        var url = u.settings.ajax_base + "/get_end_signature/?upload_id=" + escape(u.upload_id) + "&key=" + u.settings.key;
 
         XHR.call(u, {
             url: url,
@@ -874,7 +877,7 @@
                 }, u.settings.retry_timeout);
             });
         };
-        var url = u.settings.ajax_base + "/get_list_signature/?upload_id=" + escape(this.upload_id) + "&key=" + this.settings.key;
+        var url = u.settings.ajax_base + "/get_list_signature/?upload_id=" + escape(u.upload_id) + "&key=" + u.settings.key;
         XHR.call(u, {
             url: url,
             extra_params: u.settings.extra_params,
@@ -907,7 +910,7 @@
                 }, u.settings.retry_timeout);
             });
         };
-        var url = u.settings.ajax_base + "/get_chunk_signature/?chunk=" + (chunk + 1) + "&upload_id=" + escape(this.upload_id) + "&key=" + this.settings.key;
+        var url = u.settings.ajax_base + "/get_chunk_signature/?chunk=" + (chunk + 1) + "&upload_id=" + escape(u.upload_id) + "&key=" + u.settings.key;
         XHR.call(u, {
             url: url,
             extra_params: u.settings.extra_params,
