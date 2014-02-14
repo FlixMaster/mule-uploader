@@ -143,7 +143,7 @@ class S3UploadRequest
   private
 
   def upload_init_signature
-    encode("POST\n\n\n\nx-amz-acl:public-read\nx-amz-date:#{@date}\n/#{@bucket}/#{@key}?uploads")
+    encode("POST\n\n#{@mime_type}\n\nx-amz-acl:public-read\nx-amz-date:#{@date}\n/#{@bucket}/#{@key}?uploads")
   end
 
   def upload_part_signature
@@ -155,11 +155,11 @@ class S3UploadRequest
   end
 
   def upload_list_signature
-    encode("GET\n\n\n\nx-amz-date:#{@date}\n/#{@bucket}/#{@key}?uploadId=#{@upload_id}")
+    encode("GET\n\n#{@mime_type}\n\nx-amz-date:#{@date}\n/#{@bucket}/#{@key}?uploadId=#{@upload_id}")
   end
 
   def upload_delete_signature
-    encode("DELETE\n\n\n\nx-amz-date:#{@date}\n/#{@bucket}/#{@key}?uploadId=#{@upload_id}")
+    encode("DELETE\n\n#{@mime_type}\n\nx-amz-date:#{@date}\n/#{@bucket}/#{@key}?uploadId=#{@upload_id}")
   end
 
   def encode(data)

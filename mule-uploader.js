@@ -172,6 +172,7 @@
         // the Mime-Type of the content. You must match this with the backend value
         // or you'll get an Invalid Signature error. If unsure about the
         // mime type, use application/octet-stream
+        // ... this now serves as a backup for the file.type content type
         settings.content_type = settings.content_type || "application/octet-stream";
 
 
@@ -336,6 +337,7 @@
                         "x-amz-date": date,
                         "x-amz-acl": u.settings.acl,
                         "Authorization": authorization,
+                        "Content-Type": u.file.type || u.settings.content_type,
                         "Content-Disposition": "attachment; filename=" + u.file.name
                     }
                 });
@@ -613,7 +615,7 @@
                 headers: {
                     "x-amz-date": date,
                     "Authorization": authorization,
-                    "Content-Type": u.settings.content_type,
+                    "Content-Type": u.file.type || u.settings.content_type,
                     "Content-Disposition": "attachment; filename=" + u.file.name
                 },
                 body: blob
@@ -742,7 +744,7 @@
                     headers: {
                         "x-amz-date": date,
                         "Authorization": authorization,
-                        "Content-Type": u.settings.content_type,
+                        "Content-Type": u.file.type || u.settings.content_type,
                         "Content-Disposition": "attachment; filename=" + u.file.name
                     },
                     body: data
@@ -813,6 +815,7 @@
                 url: u.settings.host + path,
                 headers: {
                     "x-amz-date": date,
+                    "Content-Type": u.file.type || u.settings.content_type,
                     "Authorization": authorization
                 }
             });
@@ -841,7 +844,9 @@
                 }, u.settings.retry_timeout);
             });
         };
-        var url = u.settings.ajax_base + "/get_end_signature/?upload_id=" + escape(u.upload_id) + "&key=" + u.settings.key;
+        var url = u.settings.ajax_base + "/get_end_signature/?upload_id=" + escape(u.upload_id) +
+            "&mime_type=" + escape(u.file.type || u.settings.content_type) +
+            "&key=" + u.settings.key;
 
         XHR.call(u, {
             url: url,
@@ -877,7 +882,9 @@
                 }, u.settings.retry_timeout);
             });
         };
-        var url = u.settings.ajax_base + "/get_list_signature/?upload_id=" + escape(u.upload_id) + "&key=" + u.settings.key;
+        var url = u.settings.ajax_base + "/get_list_signature/?upload_id=" + escape(u.upload_id) +
+            "&mime_type=" + escape(u.file.type || u.settings.content_type) +
+            "&key=" + u.settings.key;
         XHR.call(u, {
             url: url,
             extra_params: u.settings.extra_params,
@@ -910,7 +917,10 @@
                 }, u.settings.retry_timeout);
             });
         };
-        var url = u.settings.ajax_base + "/get_chunk_signature/?chunk=" + (chunk + 1) + "&upload_id=" + escape(u.upload_id) + "&key=" + u.settings.key;
+        var url = u.settings.ajax_base + "/get_chunk_signature/?chunk=" + (chunk + 1) +
+            "&mime_type=" + escape(u.file.type || u.settings.content_type) +
+            "&upload_id=" + escape(u.upload_id) +
+            "&key=" + u.settings.key;
         XHR.call(u, {
             url: url,
             extra_params: u.settings.extra_params,
@@ -964,7 +974,7 @@
             });
         };
         var url = u.settings.ajax_base + "/get_init_signature/?key=" + u.settings.key +
-                "&mime_type=" + escape(u.settings.content_type) +
+                "&mime_type=" + escape(u.file.type || u.settings.content_type) +
                 "&filename=" + escape(u.file.name) +
                 "&filesize=" + u.file.size +
                 "&last_modified=" + u.file.lastModifiedDate.valueOf() +
@@ -1002,7 +1012,7 @@
             });
         };
         var url = u.settings.ajax_base + "/get_all_signatures/?key=" + key +
-                "&mime_type=" + escape(u.settings.content_type) +
+                "&mime_type=" + escape(u.file.type || u.settings.content_type) +
                 "&num_chunks=" + num_chunks +
                 "&upload_id=" + upload_id +
                 "&filename=" + escape(u.file.name) +
