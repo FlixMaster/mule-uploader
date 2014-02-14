@@ -30,27 +30,27 @@
         var xhr = new XMLHttpRequest();
         // set the "load" callback if given
         if(args.load_callback && typeof args.load_callback == 'function') {
-            xhr.addEventListener("load", args.load_callback, true);
+            xhr.addEventListener("load", args.load_callback.bind(this), true);
         }
 
         // set the "error" callback if given
         if(args.error_callback && typeof args.error_callback == 'function') {
-            xhr.addEventListener("error", args.error_callback, true);
+            xhr.addEventListener("error", args.error_callback.bind(this), true);
         }
 
         // set the "readystatechange" callback if given
         if(args.state_change_callback && typeof args.state_change_callback == 'function') {
-            xhr.addEventListener("readystatechange", args.state_change_callback);
+            xhr.addEventListener("readystatechange", args.state_change_callback.bind(this));
         }
 
         // set the "progress" callback if given
         if(args.progress_callback && typeof args.progress_callback == 'function') {
-            xhr.upload.addEventListener("progress", args.progress_callback);
+            xhr.upload.addEventListener("progress", args.progress_callback.bind(this));
         }
 
         // set the "timeout" callback if given
         if(args.timeout_callback && typeof args.timeout_callback == 'function') {
-            xhr.addEventListener('timeout', timeout_callback);
+            xhr.addEventListener('timeout', timeout_callback.bind(this));
         }
 
         // adding extra params as needed
@@ -326,7 +326,7 @@
                         u.load_file(u.file);
                     });
                 };
-                XHR({
+                XHR.call(u, {
                     method: "POST",
                     url: u.settings.host + "/" + u.settings.key + "?uploads",
                     load_callback: handler,
@@ -603,7 +603,7 @@
             var authorization = "AWS " + u.settings.access_key + ":" + signature;
             var blob = u.file.slice(start, end);
 
-            var xhr = XHR({
+            var xhr = XHR.call(u, {
                 method: "PUT",
                 url: u.settings.host + path,
                 progress_callback: progress_handler,
@@ -734,7 +734,7 @@
                 }
 
                 // send the ajax request
-                XHR({
+                XHR.call(u, {
                     url: u.settings.host + path,
                     method: "POST",
                     load_callback: handler,
@@ -803,7 +803,7 @@
             }
             var method = "GET";
             var authorization = "AWS " + u.settings.access_key + ":" + signature;
-            XHR({
+            XHR.call(u, {
                 method: "GET",
                 load_callback: handler,
                 error_callback: handler,
@@ -840,7 +840,7 @@
         };
         var url = u.settings.ajax_base + "/get_end_signature/?upload_id=" + escape(this.upload_id) + "&key=" + this.settings.key;
 
-        XHR({
+        XHR.call(u, {
             url: url,
             extra_params: u.settings.extra_params,
             load_callback: handler,
@@ -875,7 +875,7 @@
             });
         };
         var url = u.settings.ajax_base + "/get_list_signature/?upload_id=" + escape(this.upload_id) + "&key=" + this.settings.key;
-        XHR({
+        XHR.call(u, {
             url: url,
             extra_params: u.settings.extra_params,
             load_callback: handler,
@@ -908,7 +908,7 @@
             });
         };
         var url = u.settings.ajax_base + "/get_chunk_signature/?chunk=" + (chunk + 1) + "&upload_id=" + escape(this.upload_id) + "&key=" + this.settings.key;
-        XHR({
+        XHR.call(u, {
             url: url,
             extra_params: u.settings.extra_params,
             load_callback: handler,
@@ -966,7 +966,7 @@
                 "&filesize=" + u.file.size +
                 "&last_modified=" + u.file.lastModifiedDate.valueOf() +
                 (force ? "&force=true" : "");
-        XHR({
+        XHR.call(u, {
             url: url,
             extra_params: u.settings.extra_params,
             load_callback: handler,
@@ -1005,7 +1005,7 @@
                 "&filename=" + escape(u.file.name) +
                 "&filesize=" + u.file.size +
                 "&last_modified=" + u.file.lastModifiedDate.valueOf();
-        XHR({
+        XHR.call(u, {
             url: url,
             extra_params: u.settings.extra_params,
             load_callback: handler,
@@ -1025,7 +1025,7 @@
         var url = u.settings.ajax_base + '/chunk_loaded/?key=' + key + "&chunk=" + (chunk + 1) +
             "&upload_id=" + upload_id + "&filename=" + escape(u.file.name) +
             "&filesize=" + u.file.size + "&last_modified=" + u.file.lastModifiedDate.valueOf();
-        XHR({
+        XHR.call(u, {
             url: url,
             extra_params: u.settings.extra_params,
             error_callback: u.error_handler
@@ -1042,7 +1042,7 @@
         var url = u.settings.ajax_base + '/upload_finished/?key=' + key +
             "&upload_id=" + upload_id + "&filename=" + escape(u.file.name) +
             "&filesize=" + u.file.size + "&last_modified=" + u.file.lastModifiedDate.valueOf();
-        XHR({
+        XHR.call(u, {
             url: url,
             extra_params: u.settings.extra_params,
             error_callback: u.error_handler
@@ -1078,7 +1078,7 @@
             };
         }
 
-        XHR({
+        XHR.call(u, {
             url: u.settings.host + path,
             method: "HEAD",
             load_callback: inner_handler,
