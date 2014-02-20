@@ -1095,7 +1095,7 @@
             url: u.settings.host + path,
             method: "HEAD",
             load_callback: inner_handler,
-            error_callback: error_callback,
+            error_callback: error_callback
         });
     };
 
