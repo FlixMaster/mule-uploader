@@ -273,7 +273,7 @@
         // check for accepted extensions, if applicable
         if(u.settings.accepted_extensions) {
             // get the file extension
-            var file_extension = file.name.split('.').pop();
+            var file_extension = file.name.split('.').pop().toLowerCase();
 
             // split the given extensions into an array
             extensions_array = u.settings.accepted_extensions.split(',');
