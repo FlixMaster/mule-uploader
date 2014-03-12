@@ -273,7 +273,7 @@
         // check for accepted extensions, if applicable
         if(u.settings.accepted_extensions) {
             // get the file extension
-            var file_extension = file.name.split('.').pop().toLowerCase();
+            var file_extension = u.file.name.split('.').pop().toLowerCase();
 
             // split the given extensions into an array
             extensions_array = u.settings.accepted_extensions.split(',');
@@ -295,7 +295,7 @@
         }
 
         // Allow cancelling
-        var proceed = u.settings.on_select.call(u, file);
+        var proceed = u.settings.on_select.call(u, u.file);
         if (typeof proceed === "boolean" && !proceed) {
             return;
         }
@@ -1173,13 +1173,14 @@
 
     // set a chunk's progress
     Uploader.prototype.set_progress = function(chunk, loaded) {
-        var num_chunks = Math.ceil(this.file.size / this.settings.chunk_size);
-        this.log_status();
-        this._progress = this._progress || {};
-        this._total_progress = (this._total_progress || 0 ) + loaded - (this._progress[chunk] || 0);
-        this._progress[chunk] = loaded;
-        this.settings.on_chunk_progress.call(
-            this, chunk, loaded, this.get_chunk_size(chunk));
+        var u = this;
+        var num_chunks = Math.ceil(u.file.size / u.settings.chunk_size);
+        u.log_status();
+        u._progress = u._progress || {};
+        u._total_progress = (u._total_progress || 0 ) + loaded - (u._progress[chunk] || 0);
+        u._progress[chunk] = loaded;
+        u.settings.on_chunk_progress.call(
+            u, chunk, loaded, u.get_chunk_size(chunk));
     };
 
     // gets the total bytes uploaded
